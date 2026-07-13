@@ -1,0 +1,5 @@
+import React,{createContext,useContext,useState,useEffect,useCallback}from'react';import{api}from'./api.js';const C=createContext(null);
+export function AuthProvider({children}){const[u,sU]=useState(null);const[ld,sL]=useState(true);const lo=useCallback(async()=>{const t=localStorage.getItem('rc_token');if(!t){sL(false);return}try{const d=await api.auth.me();sU(d.user)}catch{localStorage.removeItem('rc_token')}finally{sL(false)}},[]);useEffect(()=>{lo()},[lo]);
+const login=async(e,p)=>{const d=await api.auth.login({email:e,password:p});localStorage.setItem('rc_token',d.token);sU(d.user);return d};const signup=async(e,n,p)=>{const d=await api.auth.signup({email:e,name:n,password:p});localStorage.setItem('rc_token',d.token);sU(d.user);return d};const logout=()=>{localStorage.removeItem('rc_token');sU(null)};
+return<C.Provider value={{user:u,loading:ld,login,signup,logout}}>{children}</C.Provider>}
+export function useAuth(){const c=useContext(C);if(!c)throw new Error('useAuth');return c}

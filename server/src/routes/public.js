@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import { getDb } from '../db.js';
+import { sendEmail } from '../email.js';
 
 const router = Router();
 
@@ -22,6 +23,24 @@ router.post('/:campaignId/respond', (req, res) => {
   db.prepare('INSERT INTO responses (id,campaign_id,rating,review_text,nps_score,respondent_name,respondent_email) VALUES (?,?,?,?,?,?,?)')
     .run(id, req.params.campaignId, rating||null, review_text||'', nps_score||null, respondent_name||'', respondent_email||'');
   const count = db.prepare('SELECT COUNT(*) as cnt FROM responses WHERE campaign_id=?').get(req.params.campaignId);
+
+  // Send confirmation email if respondent provided email
+  if (respondent_email) {
+    sendEmail({
+      to: respondent_email,
+      subject: `Thank you for your feedback!`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+        <h1 style="color:#6366f1;margin-bottom:16px">Thank you!</h1>
+        <p>Hi ${respondent_name || 'there'},</p>
+        <p>Thank you for sharing your feedback${campaign.name ? ' about ' + campaign.name : ''}.</p>
+        ${rating ? `<p>Your rating: ${'⭐'.repeat(rating)}</p>` : ''}
+        ${nps_score !== null ? `<p>Your NPS score: ${nps_score}/10</p>` : ''}
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0" />
+        <p style="color:#888;font-size:13px">ReviewCollector</p>
+      </div>`
+    });
+  }
+
   res.status(201).json({ response: { id }, response_count: count.cnt });
 });
 
